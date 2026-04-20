@@ -39,32 +39,27 @@ lb config \
     --archive-areas "main restricted universe multiverse" \
     --mirror-bootstrap "http://archive.ubuntu.com/ubuntu/" \
     --mirror-chroot "http://archive.ubuntu.com/ubuntu/" \
-    --debootstrap-options "--variant=minbase" \
     --apt-recommends false \
     --apt-secure true
 
 # Add our package list (now includes Calamares + Microsoft Edge + full features)
 cat > config/package-lists/xpforge.list.chroot << EOF
 # Core Desktop
-xfce4 xfce4-goodies lightdm lightdm-gtk-greeter xfce4-panel-profiles picom xfce4-terminal
+xfce4 xfce4-goodies lightdm lightdm-gtk-greeter xfce4-terminal picom
 # Theming
 gtk2-engines-pixbuf gtk2-engines-murrine
-# Wine & Compatibility
-winehq-staging winetricks
-# Gaming
-steam lutris flatpak
+# Gaming (steam/wine/lutris/edge installed via chroot hook after i386 + repos are added)
+flatpak
 # Retro
-dosbox-staging dosbox-x scummvm retroarch libretro-*
+dosbox scummvm retroarch
 # Tools
-git curl wget unzip p7zip-full build-essential software-properties-common
+git curl wget unzip p7zip-full build-essential software-properties-common gnupg ca-certificates
 # QEMU for ReactOS VM
 qemu-kvm qemu-utils
 # Calamares Installer
-calamares calamares-settings-ubuntu
-# Microsoft Edge (as "Internet Explorer")
-microsoft-edge-stable
-# App Store (Discover with Flatpak backend - Windows Store style)
-discover plasma-discover-backend-flatpak
+calamares
+# App Store
+plasma-discover plasma-discover-backend-flatpak
 EOF
 
 echo "[3/8] Adding chroot hook to auto-install XPForge theme and apps..."
@@ -506,12 +501,12 @@ echo "[5/8] Building the live filesystem (this takes 20-60 minutes)..."
 sudo lb build 2>&1 | tee build.log
 
 echo "[6/8] Moving ISO to artifacts..."
-mkdir -p /home/workdir/artifacts/xpforge/iso
-mv "$WORK_DIR/live-image-amd64.hybrid.iso" "/home/workdir/artifacts/xpforge/iso/$ISO_NAME" 2>/dev/null || \
-mv "$WORK_DIR/binary/live-image-amd64.hybrid.iso" "/home/workdir/artifacts/xpforge/iso/$ISO_NAME" || true
+mkdir -p $HOME/artifacts/xpforge/iso
+mv "$WORK_DIR/live-image-amd64.hybrid.iso" "$HOME/artifacts/xpforge/iso/$ISO_NAME" 2>/dev/null || \
+mv "$WORK_DIR/binary/live-image-amd64.hybrid.iso" "$HOME/artifacts/xpforge/iso/$ISO_NAME" || true
 
 echo "[7/8] Creating checksums and README for the ISO..."
-cd /home/workdir/artifacts/xpforge/iso
+cd $HOME/artifacts/xpforge/iso
 sha256sum "$ISO_NAME" > "$ISO_NAME.sha256"
 cat > README-ISO.txt << EOF
 XPForge Live ISO v0.1
@@ -530,7 +525,7 @@ Built: $(date)
 For updates and full source: github.com/xpforge/xpforge
 EOF
 
-echo "[8/8] Done! ISO ready at: /home/workdir/artifacts/xpforge/iso/$ISO_NAME"
+echo "[8/8] Done! ISO ready at: $HOME/artifacts/xpforge/iso/$ISO_NAME"
 echo ""
 echo "✅ XPForge Live + Installer ISO created successfully!"
 echo ""
