@@ -83,6 +83,9 @@ sudo mount --bind   /dev         "$CHROOT/dev"
 sudo mount --bind   /dev/pts     "$CHROOT/dev/pts"
 sudo mount -t tmpfs none         "$CHROOT/run"
 
+# Give the chroot working DNS (copy host resolver config)
+sudo cp /etc/resolv.conf "$CHROOT/etc/resolv.conf"
+
 # Write the in-chroot setup script
 sudo tee "$CHROOT/tmp/setup.sh" > /dev/null << 'SETUP'
 #!/bin/bash
