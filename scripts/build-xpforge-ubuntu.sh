@@ -132,8 +132,23 @@ add-apt-repository -y ppa:lutris-team/lutris 2>/dev/null || true
 
 apt-get update -qq
 
-echo "--- [chroot] Installing kernel ---"
-apt-get install -y --no-install-recommends linux-generic initramfs-tools
+echo "--- [chroot] Installing kernel 7.0 via mainline PPA ---"
+add-apt-repository -y ppa:cappelikan/ppa 2>/dev/null || true
+apt-get update -qq
+apt-get install -y --no-install-recommends mainline initramfs-tools || true
+
+# Try to install kernel 7.0 specifically, then latest, then stock fallback
+if command -v mainline &>/dev/null; then
+    mainline --install v7.0 2>/dev/null || \
+    mainline --install-latest 2>/dev/null || \
+    echo "mainline install failed, falling back to stock kernel"
+fi
+
+# Fallback: stock kernel if mainline produced nothing
+if [ -z "$(ls /boot/vmlinuz-* 2>/dev/null)" ]; then
+    echo "No kernel found - installing stock linux-generic as fallback"
+    apt-get install -y --no-install-recommends linux-generic
+fi
 
 echo "--- [chroot] Installing casper (Ubuntu live-boot) ---"
 apt-get install -y --no-install-recommends casper || \
