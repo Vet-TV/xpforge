@@ -83,8 +83,12 @@ sudo mount --bind   /dev         "$CHROOT/dev"
 sudo mount --bind   /dev/pts     "$CHROOT/dev/pts"
 sudo mount -t tmpfs none         "$CHROOT/run"
 
-# Give the chroot working DNS (copy host resolver config)
-sudo cp /etc/resolv.conf "$CHROOT/etc/resolv.conf"
+# Give the chroot working DNS
+# Ubuntu 24.04 makes /etc/resolv.conf a dangling symlink to systemd-resolved;
+# remove it and drop in a plain file with the host's resolver instead.
+sudo rm -f "$CHROOT/etc/resolv.conf"
+sudo cp /etc/resolv.conf "$CHROOT/etc/resolv.conf" 2>/dev/null || \
+    echo "nameserver 8.8.8.8" | sudo tee "$CHROOT/etc/resolv.conf" > /dev/null
 
 # Write the in-chroot setup script
 sudo tee "$CHROOT/tmp/setup.sh" > /dev/null << 'SETUP'
