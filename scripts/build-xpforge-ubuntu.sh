@@ -92,7 +92,13 @@ export DEBIAN_FRONTEND=noninteractive
 export LANG=C
 export CRYPTSETUP=n  # Suppress cryptsetup warnings in initramfs
 
-echo "--- [chroot] Updating package lists ---"
+echo "--- [chroot] Writing full apt sources (main + universe + multiverse) ---"
+cat > /etc/apt/sources.list << 'SOURCES'
+deb http://archive.ubuntu.com/ubuntu noble           main restricted universe multiverse
+deb http://archive.ubuntu.com/ubuntu noble-updates   main restricted universe multiverse
+deb http://archive.ubuntu.com/ubuntu noble-security  main restricted universe multiverse
+SOURCES
+
 apt-get update -qq
 
 echo "--- [chroot] Enabling i386 ---"
@@ -119,14 +125,12 @@ add-apt-repository -y ppa:lutris-team/lutris 2>/dev/null || true
 
 apt-get update -qq
 
-echo "--- [chroot] Installing kernel + live-boot ---"
-apt-get install -y --no-install-recommends \
-    linux-generic \
-    casper \
-    lupin-casper \
-    initramfs-tools \
-    live-boot \
-    live-config
+echo "--- [chroot] Installing kernel ---"
+apt-get install -y --no-install-recommends linux-generic initramfs-tools
+
+echo "--- [chroot] Installing casper (Ubuntu live-boot) ---"
+apt-get install -y --no-install-recommends casper || \
+    echo "casper failed - ISO may not boot as live system"
 
 echo "--- [chroot] Installing XFCE desktop ---"
 apt-get install -y --no-install-recommends \
@@ -167,7 +171,7 @@ apt-get install -y --no-install-recommends \
     dosbox \
     scummvm \
     retroarch \
-    qemu-kvm \
+    qemu-system-x86 \
     qemu-utils \
     || echo "Some retro tools failed - skipping"
 
@@ -178,8 +182,10 @@ apt-get install -y --no-install-recommends \
 
 echo "--- [chroot] Installing utilities ---"
 apt-get install -y --no-install-recommends \
-    git curl wget unzip p7zip-full \
-    build-essential network-manager
+    git curl wget unzip p7zip p7zip-full \
+    build-essential network-manager || \
+    apt-get install -y --no-install-recommends \
+        git curl wget unzip build-essential network-manager
 
 echo "--- [chroot] Cleaning package cache ---"
 apt-get clean
@@ -257,7 +263,7 @@ EOF
 cat > "$D/ReactOS VM.desktop" << 'EOF'
 [Desktop Entry]
 Name=ReactOS VM
-Exec=qemu-system-x86_64 -m 2048 -enable-kvm -drive file=/home/xpforge/reactos.img -net user -display gtk
+Exec=qemu-system-x86_64 -m 2048 -enable-kvm -drive file=/home/xpforge/reactos.img -netdev user,id=n1 -device e1000,netdev=n1 -display gtk
 Icon=computer
 Terminal=false
 Type=Application
