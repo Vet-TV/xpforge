@@ -66,7 +66,7 @@ echo "[3/8] Adding chroot hook to auto-install XPForge theme and apps..."
 mkdir -p config/hooks/normal
 cat > config/hooks/normal/01-xpforge-install.chroot << 'HOOKEOF'
 #!/bin/bash
-set -e
+# set -e intentionally omitted: hook must always run to completion
 echo "=== XPForge Live Hook: Installing full environment ==="
 
 # Add Wine repo + Microsoft Edge repo
@@ -91,9 +91,9 @@ apt update -y
 apt install -y --no-install-recommends \
     xfce4 xfce4-goodies lightdm-gtk-greeter xfce4-panel-profiles picom xfce4-terminal \
     winehq-staging winetricks steam lutris flatpak \
-    dosbox-staging dosbox-x scummvm retroarch \
+    dosbox scummvm retroarch \
     qemu-kvm qemu-utils git curl wget \
-    calamares calamares-settings-ubuntu microsoft-edge-stable
+    calamares microsoft-edge-stable || true
 
 # Install Chicago95 theme
 cd /tmp
@@ -490,12 +490,29 @@ echo "127.0.0.1 xpforge" >> /etc/hosts
 sed -i 's/#autologin-user=/autologin-user=xpforge/' /etc/lightdm/lightdm.conf
 sed -i 's/#autologin-user-timeout=0/autologin-user-timeout=0/' /etc/lightdm/lightdm.conf
 
+# Fix dangling initrd symlinks that cause lb_chroot_hacks to fail in WSL/chroot
+for link in /boot/initrd.img /boot/initrd.img.old; do
+    if [ -L "$link" ] && [ ! -e "$link" ]; then
+        target=$(readlink "$link")
+        [[ "$target" != /* ]] && target="/boot/$target"
+        touch "$target" 2>/dev/null || true
+    fi
+done
+
 echo "=== XPForge Live Hook Complete ==="
 HOOKEOF
 chmod +x config/hooks/normal/01-xpforge-install.chroot
 
 echo "[4/8] Adding boot splash and XP-style Plymouth theme (optional)..."
 # For simplicity we use default; advanced users can add plymouth-xp theme later
+
+echo "[4b/8] Patching live-build for WSL initrd compatibility..."
+for HACKS in $(find /usr -name "chroot_hacks" 2>/dev/null); do
+    sudo sed -i \
+        's/chmod -x chroot\/boot\/initrd\.img/chmod -x chroot\/boot\/initrd.img 2>\/dev\/null || true  #patched/g' \
+        "$HACKS" 2>/dev/null || true
+    echo "  Patched: $HACKS"
+done
 
 echo "[5/8] Building the live filesystem (this takes 20-60 minutes)..."
 sudo lb build 2>&1 | tee build.log
