@@ -54,7 +54,7 @@ mkdir -p "$WORK_DIR"
 
 sudo debootstrap \
     --arch=amd64 \
-    --include=ca-certificates,curl,wget,gnupg2,software-properties-common,apt-transport-https \
+    --include=ca-certificates,curl,wget,gnupg,software-properties-common \
     "$DISTRO" \
     "$CHROOT" \
     "$MIRROR"
